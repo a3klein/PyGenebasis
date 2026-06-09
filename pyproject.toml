@@ -1,0 +1,36 @@
+[project]
+name = "pygenebasis"
+version = "0.1.0"
+description = "Fast Python reimplementation of geneBasisR for gene panel design from scRNA-seq data"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "anndata",
+    "scanpy",
+    "scikit-learn",
+    "pynndescent",
+    "harmonypy",
+    "joblib",
+]
+
+[project.scripts]
+pygenebasis = "pygenebasis.cli._main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+markers = [
+    "slow: marks tests as slow — deselect with '-m \"not slow\"'",
+    "benchmark: marks tests as standalone benchmarks",
+    "mouse: tests using the mouse embryo E8.5 reference dataset",
+    "bg_sn: tests using the BG substantia nigra reference dataset",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pygenebasis"]
