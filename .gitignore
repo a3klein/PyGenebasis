@@ -1,1 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Test reference data — large, regenerated from R
 tests/reference_data/*
+
+# Local working notes — public repo
+CLAUDE.md
+engineering_history.md
+scientific_findings.md
+.claude/
