@@ -13,7 +13,14 @@ dependencies = [
     "pynndescent",
     "harmonypy",
     "joblib",
+    "matplotlib",
+    "scranpy",       # default HVG flavor ("scran")
+    "click",         # CLI entry point
 ]
+
+[project.optional-dependencies]
+# Optional CLI polish — all import-guarded, the CLI works without them.
+cli = ["rich-click", "rich", "psutil"]
 
 [project.scripts]
 pygenebasis = "pygenebasis.cli._main:main"

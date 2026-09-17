@@ -631,7 +631,14 @@ def score_gene_reliability(
     # fidelity_n_sigma rule (threshold = mean − n_sigma × std of the fitted dist).
     ps = profile_sim
     ps_bulk = ps[(ps >= np.quantile(ps, 0.05)) & (ps <= np.quantile(ps, 0.95))]
-    a_ps, loc_ps, scale_ps = stats.skewnorm.fit(ps_bulk)
+    try:
+        a_ps, loc_ps, scale_ps = stats.skewnorm.fit(ps_bulk)
+    except stats.FitError:
+        # Near-constant bulk (e.g. identical input matrices) — fall back to a
+        # symmetric fit so nothing is flagged.
+        a_ps = 0.0
+        loc_ps, scale_ps = stats.norm.fit(ps_bulk)
+        scale_ps = max(float(scale_ps), 1e-12)
     mu_ps    = float(stats.skewnorm.mean(a_ps, loc=loc_ps, scale=scale_ps))
     sigma_ps = float(stats.skewnorm.std(a_ps,  loc=loc_ps, scale=scale_ps))
     profile_threshold = float(mu_ps - fidelity_n_sigma * sigma_ps)
