@@ -10,6 +10,11 @@ dist/
 # Test reference data — large, regenerated from R
 tests/reference_data/*
 
+# Development scratch — R-parity investigation, kept local
+tests/notebooks/
+tests/images/
+tests/diagnose_*
+
 # Local working notes — public repo
 CLAUDE.md
 engineering_history.md
