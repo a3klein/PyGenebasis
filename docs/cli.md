@@ -55,13 +55,21 @@ pygenebasis panel search --adata ref.h5ad --n-genes 300 --output panel.csv \
 | `--batch-method` | `per_batch` | `per_batch`, `mnn` or `harmony` |
 | `--n-neighbors` | `5` | k for the kNN graphs |
 | `--n-pcs` | `50` | PCA components |
+| `--hvg-flavor` | `scran` | `scran`, `seurat`, `seurat_v3` or `methylation` |
+| `--hvg-n` | | HVGs to keep before selection |
+| `--coverage-key` | `cov_mean` | methylation only: `adata.var` column with per-gene mean coverage |
 | `--layer` | | layer holding logcounts |
 
 This is the expensive command; cost grows with reference size, gene count and panel size.
 
-> `panel search` always applies `retain_informative_genes` with default settings before
-> selecting, and does not currently expose a way to tune or skip that filter. Use the Python
-> API if you need control over HVG selection.
+For mCH/mCG rate matrices use `--hvg-flavor methylation`, which bins dispersion by mean and
+coverage. The coverage column must already be in `adata.var` — see
+[methods.md](methods.md#methylation-panels).
+
+```bash
+pygenebasis panel search --adata meth.h5ad --n-genes 300 --output panel.csv \
+    --hvg-flavor methylation --hvg-n 3000
+```
 
 ## panel trim
 

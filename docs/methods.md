@@ -37,6 +37,34 @@ rebuilt, and the process repeats.
 This is why the greedy path matters and why the result is not simply "the top N most variable
 genes": each choice is conditional on what has already been picked.
 
+## Methylation panels
+
+For mCH/mCG data the input is a **rate** matrix, not counts, and dispersion depends on
+coverage as well as mean — a thinly covered gene looks variable for reasons that are not
+biological. `retain_informative_genes(flavor="methylation")` therefore z-scores dispersion
+within **mean x coverage** bins rather than mean alone, sparse bins being merged into their
+nearest neighbour first.
+
+It needs per-gene mean coverage in `adata.var` (`coverage_key`, default `cov_mean`). Nothing
+computes this for you: in ALLCools it is the `{var_dim}_cov_mean` coordinate from
+`MCDS.add_feature_cov_mean`, and it has to be carried across when the AnnData is built. The
+function raises if the column is absent.
+
+```python
+adata = pgb.retain_informative_genes(
+    adata, flavor="methylation", coverage_key="cov_mean", n=3000
+)
+```
+
+`highly_variable_methylation_features` returns the full per-gene table — mean, dispersion,
+coverage, bin assignments, `dispersion_norm`, `feature_select` — if you want to inspect the
+fit. Passing `n` takes the top features by normalised dispersion; omitting it uses the
+ALLCools cutoffs (`min_disp=0.5`, `min_mean=0`, `max_mean=5`).
+
+This is a port of ALLCools `highly_variable_methylation_feature`, verified column-for-column
+against it. Two upstream bugs are fixed: it crashes under pandas >= 2, and its
+`n_top_feature` is ignored (hardcoded at 5000).
+
 ## Evaluation metrics
 
 ### Cell score — `get_neighborhood_preservation_scores`

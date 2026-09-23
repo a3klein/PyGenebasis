@@ -68,7 +68,7 @@ count. Start small to gauge runtime before committing to a full run.
 | Area | Functions |
 |---|---|
 | **I/O** | `read_adata`, `read_table`, `write_csv`, `write_tsv`, `write_json`, `prepare_batch_key` |
-| **Preprocessing** | `retain_informative_genes` |
+| **Preprocessing** | `retain_informative_genes`, `highly_variable_methylation_features` |
 | **Graph** | `build_knn_graph` |
 | **Selection** | `gene_search`, `trim_panel`, `calc_minkowski_distances` |
 | **Evaluation** | `get_neighborhood_preservation_scores`, `get_gene_prediction_scores`, `get_neighs_all_stat`, `evaluate_library`, `get_panel_celltype_accuracy` |
@@ -109,6 +109,10 @@ against R.
 **HVG selection uses scranpy**, a Python port of `scran::modelGeneVar`, rather than calling
 scran itself. Overlap with R is high but not exact. `flavor="seurat"` and `"seurat_v3"`
 delegate to scanpy instead.
+
+**Methylation is supported**, which geneBasisR does not do: `flavor="methylation"` bins
+dispersion by mean and coverage for mCH/mCG rate matrices. See
+[docs/methods.md](docs/methods.md#methylation-panels).
 
 Numerical tolerances used when comparing against R are defined in `tests/helpers.py`.
 
