@@ -61,12 +61,34 @@ def plot_mapping_heatmap(
     return fig, ax
 
 
+def _cluster_order(matrix: np.ndarray, axis: int = 0) -> np.ndarray:
+    """Leaf order from average-linkage correlation clustering along `axis`.
+
+    Falls back to the original order for fewer than 3 elements or a degenerate
+    matrix.
+    """
+    from scipy.cluster.hierarchy import leaves_list, linkage
+    from scipy.spatial.distance import pdist
+
+    data = matrix if axis == 0 else matrix.T
+    n = data.shape[0]
+    if n < 3:
+        return np.arange(n)
+    data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+    metric = "correlation" if np.ptp(data, axis=1).min() > 1e-12 else "euclidean"
+    dist = pdist(data, metric=metric)
+    if not np.isfinite(dist).all():
+        dist = np.nan_to_num(dist, nan=dist[np.isfinite(dist)].max() if np.isfinite(dist).any() else 1.0)
+    return leaves_list(linkage(dist, method="average"))
+
+
 def plot_expression_heatmap(
     adata: AnnData,
     genes: list[str],
     *,
     celltype_key: str = "celltype",
     value_type: str = "mean",
+    cluster: bool = True,
     layer: str | None = None,
 ):
     """Heatmap of mean (or fraction non-zero) expression per cell type.
@@ -81,6 +103,10 @@ def plot_expression_heatmap(
     value_type : {"mean", "frac"}
         "mean" — mean log-normalised expression per cell type (z-scored per gene).
         "frac" — fraction of cells with non-zero expression.
+    cluster : bool
+        Order genes and cell types by hierarchical clustering so expression
+        modules form visible blocks.  False keeps the given gene order and
+        sorts cell types alphabetically.
     layer : str, optional
         Layer to use instead of adata.X.
 
@@ -110,6 +136,13 @@ def plot_expression_heatmap(
     col_std = matrix.std(axis=0)
     matrix_z = (matrix - col_mean) / np.where(col_std < 1e-12, 1.0, col_std)
 
+    if cluster:
+        gene_ord = _cluster_order(matrix_z, axis=1)
+        ct_ord = _cluster_order(matrix_z, axis=0)
+        matrix_z = matrix_z[np.ix_(ct_ord, gene_ord)]
+        genes_present = [genes_present[i] for i in gene_ord]
+        unique_cts = [unique_cts[i] for i in ct_ord]
+
     n_ct, n_g = matrix_z.shape
     fig, ax = plt.subplots(figsize=(max(5, n_g * 0.22 + 1.5), max(3, n_ct * 0.35 + 1)))
     im = ax.imshow(matrix_z, cmap="RdYlBu_r", aspect="auto", vmin=-2, vmax=2)
@@ -132,6 +165,7 @@ def plot_coexpression(
     genes: list[str],
     *,
     title: str | None = None,
+    cluster: bool = True,
     layer: str | None = None,
 ):
     """Pairwise gene co-expression heatmap (Pearson correlation over cells).
@@ -141,6 +175,10 @@ def plot_coexpression(
     adata : AnnData
     genes : list[str]
     title : str, optional
+    cluster : bool
+        Order genes by hierarchical clustering of the correlation matrix, so
+        co-expression modules appear as blocks on the diagonal.  The same order
+        is applied to rows and columns.
     layer : str, optional
 
     Returns
@@ -161,6 +199,11 @@ def plot_coexpression(
     corr = (X_n.T @ X_n) / X.shape[0]
     np.fill_diagonal(corr, 1.0)
     corr = np.clip(corr, -1.0, 1.0)
+
+    if cluster:
+        order = _cluster_order(corr, axis=0)
+        corr = corr[np.ix_(order, order)]
+        genes_present = [genes_present[i] for i in order]
 
     n = len(genes_present)
     size = max(4.0, n * 0.25)
