@@ -118,3 +118,30 @@ class TestReliabilityCommands:
               "--out-dir", str(out_dir)])
         written = {p.name for p in out_dir.glob("*.csv")}
         assert {"delta_ct.csv", "baseline_ct.csv", "summary.csv"} <= written
+
+
+class TestMethylationFlavor:
+
+    def test_search_with_methylation_hvf(self, tmp_path):
+        """panel search must reach the methylation HVF path end to end."""
+        import anndata as ad
+        rng = np.random.default_rng(3)
+        n_cell, n_gene = 150, 300
+        gm = rng.uniform(0.02, 0.95, size=n_gene)
+        X = np.clip(rng.normal(gm, rng.uniform(0.02, 0.35, n_gene),
+                               size=(n_cell, n_gene)), 0, 1)
+        adata = ad.AnnData(
+            X=X,
+            obs=pd.DataFrame({"celltype": rng.choice(list("AB"), n_cell)},
+                             index=[f"c{i}" for i in range(n_cell)]),
+            var=pd.DataFrame({"cov_mean": rng.lognormal(3.2, 0.8, n_gene)},
+                             index=[f"g{i}" for i in range(n_gene)]),
+        )
+        src = tmp_path / "meth.h5ad"
+        adata.write_h5ad(src)
+
+        out = tmp_path / "meth_panel.csv"
+        _run(["panel", "search", "--adata", str(src), "--n-genes", "8",
+              "--hvg-flavor", "methylation", "--hvg-n", "80",
+              "--output", str(out)])
+        assert len(pd.read_csv(out, index_col=0)) == 8

@@ -37,6 +37,13 @@ log = logging.getLogger(__name__)
               help="Number of nearest neighbours k.")
 @click.option("--n-pcs", default=50, show_default=True, type=int,
               help="Number of PCA components for graph construction.")
+@click.option("--hvg-flavor", default="scran", show_default=True,
+              type=click.Choice(["scran", "seurat", "seurat_v3", "methylation"]),
+              help="HVG backend. Use 'methylation' for mCH/mCG rates.")
+@click.option("--hvg-n", default=None, type=int,
+              help="Keep this many HVGs before selection (default: the flavor's own cutoff).")
+@click.option("--coverage-key", default="cov_mean", show_default=True,
+              help="For --hvg-flavor methylation: adata.var column with per-gene mean coverage.")
 @click.option("--layer", default=None, type=str,
               help="AnnData layer with logcounts (default: .X).")
 @click.option("--log-dir", default=None, type=click.Path(),
@@ -45,7 +52,7 @@ def panel_search(
     adata_path, n_genes, output,
     genes_base, genes_discard,
     batch_key, knn_method, batch_method,
-    n_neighbors, n_pcs, layer, log_dir,
+    n_neighbors, n_pcs, hvg_flavor, hvg_n, coverage_key, layer, log_dir,
 ):
     """Greedily select a gene panel of size N_GENES.
 
@@ -61,8 +68,10 @@ def panel_search(
     log.info("Loading %s", adata_path)
     adata = read_adata(adata_path)
 
-    log.info("Filtering to informative genes")
-    adata = retain_informative_genes(adata)
+    log.info("Filtering to informative genes (flavor=%s)", hvg_flavor)
+    adata = retain_informative_genes(
+        adata, n=hvg_n, flavor=hvg_flavor, coverage_key=coverage_key, layer=layer,
+    )
 
     gb = [g.strip() for g in genes_base.split(",")] if genes_base else None
     gd = [g.strip() for g in genes_discard.split(",")] if genes_discard else None
