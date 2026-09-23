@@ -267,7 +267,7 @@ def trim_panel(
     """
     from joblib import Parallel, delayed
     from sklearn.decomposition import PCA
-    from ._evaluation import get_neighs_all_stat, _median_neighbour_dist
+    from ..evaluation._neighborhood import get_neighs_all_stat, _median_neighbour_dist
     from ..knn._graph import _extract_logcounts, build_knn_graph
     from ..knn._backends import get_knn_backend
 

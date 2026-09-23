@@ -195,7 +195,7 @@ def panel_evaluate(
     configure_logging(log_dir=log_dir)
 
     from ..io import read_adata, read_table, write_csv
-    from ..panel import evaluate_library
+    from ..evaluation import evaluate_library
 
     log.info("Loading %s", adata_path)
     adata = read_adata(adata_path)

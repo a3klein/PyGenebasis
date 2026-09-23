@@ -47,7 +47,7 @@ from pygenebasis.reliability import (
     plot_removal_benefit,
 )
 from pygenebasis.io import prepare_batch_key
-from pygenebasis.panel._mapping import _constrained_vote
+from pygenebasis.evaluation._mapping import _constrained_vote
 
 # ---------------------------------------------------------------------------
 # Constants shared across tests
@@ -855,7 +855,7 @@ class TestConstrainedVote:
         At the coarsest level every cell has the same parent label so no
         neighbour is filtered out — constrained and unconstrained agree.
         """
-        from pygenebasis.panel._mapping import _mode_with_tiebreak
+        from pygenebasis.evaluation._mapping import _mode_with_tiebreak
 
         rng = np.random.default_rng(7)
         true_labels   = np.array(["A", "B", "A", "B", "A"])
@@ -871,7 +871,7 @@ class TestConstrainedVote:
 
     def test_fallback_when_no_valid_neighbours(self):
         """Cells with zero same-parent neighbours fall back to unconstrained."""
-        from pygenebasis.panel._mapping import _mode_with_tiebreak
+        from pygenebasis.evaluation._mapping import _mode_with_tiebreak
 
         # 4 cells: cell 0 is class A; cells 1-3 are class B.
         # Cell 0's 3 neighbours (cells 1-3) are all class B → no valid constrained

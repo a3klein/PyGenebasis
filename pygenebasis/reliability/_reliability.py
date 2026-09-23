@@ -341,7 +341,7 @@ def run_perturbation_analysis(
     ValueError
         If ``vote`` is not one of ``{"unconstrained", "constrained", "both"}``.
     """
-    from ..panel._mapping import get_celltype_mapping, _mode_with_tiebreak, _constrained_vote
+    from ..evaluation._mapping import get_celltype_mapping, _mode_with_tiebreak, _constrained_vote
 
     # --- Validate vote parameter ---
     if vote not in _VALID_VOTE:

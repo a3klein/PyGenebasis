@@ -23,7 +23,7 @@ from pygenebasis import (
     get_panel_celltype_accuracy,
     get_celltype_mapping,
 )
-from pygenebasis.panel._evaluation import get_neighs_all_stat, _median_neighbour_dist
+from pygenebasis.evaluation._neighborhood import get_neighs_all_stat, _median_neighbour_dist
 from pygenebasis.knn._graph import build_knn_graph
 from helpers import (
     N_NEIGHBORS, N_PCS_ALL, RANDOM_STATE,

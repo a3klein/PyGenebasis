@@ -37,6 +37,18 @@ Mapping
     get_celltype_mapping
     get_redundancy_stat
 
+Panel-only clustering
+    cluster_on_panel            Cluster using the panel genes alone.
+    cluster_agreement           ARI / AMI against reference labels.
+    agreement_crosstab          Contingency table, ordered to read diagonally.
+
+Classifier and coverage
+    classifier_gap              Panel vs full feature set, logistic regression.
+    marker_detection            Per gene x label detection and fold enrichment.
+    coverage_by_label           Usable markers per cell type.
+    per_label_summary           One row per cell type, with a diagnosis.
+    panel_report                Run the suite; returns the report tables.
+
 Co-expression reliability scoring
     compute_corr_matrices
     score_gene_reliability
@@ -73,6 +85,8 @@ from .panel import (
     calc_minkowski_distances,
     gene_search,
     trim_panel,
+)
+from .evaluation import (
     get_neighborhood_preservation_scores,
     get_gene_prediction_scores,
     get_neighs_all_stat,
@@ -80,8 +94,22 @@ from .panel import (
     get_panel_celltype_accuracy,
     get_celltype_mapping,
     get_redundancy_stat,
+    cluster_on_panel,
+    cluster_agreement,
+    agreement_crosstab,
+    classifier_gap,
+    marker_detection,
+    coverage_by_label,
+    per_label_summary,
+    panel_report,
 )
 from .pl import (
+    plot_preservation_violin,
+    plot_weakness_map,
+    plot_agreement_crosstab,
+    plot_classifier_diagonal,
+    plot_classifier_confusion,
+    plot_marker_count,
     plot_mapping_heatmap,
     plot_expression_heatmap,
     plot_coexpression,
@@ -122,6 +150,20 @@ __all__ = [
     "get_panel_celltype_accuracy",
     "get_celltype_mapping",
     "get_redundancy_stat",
+    "cluster_on_panel",
+    "cluster_agreement",
+    "agreement_crosstab",
+    "classifier_gap",
+    "marker_detection",
+    "coverage_by_label",
+    "per_label_summary",
+    "panel_report",
+    "plot_preservation_violin",
+    "plot_weakness_map",
+    "plot_agreement_crosstab",
+    "plot_classifier_diagonal",
+    "plot_classifier_confusion",
+    "plot_marker_count",
     "plot_mapping_heatmap",
     "plot_expression_heatmap",
     "plot_coexpression",
