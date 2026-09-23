@@ -24,6 +24,7 @@ Data flow (per-batch, batch_method="per_batch" — geneBasisR default)
     Stitch per-batch results into full (n_cells, k) arrays.
 
 Data flow (cross-batch correction, batch_method="mnn"/"harmony")
+  Prefer "harmony" — "mnn" is a from-scratch sklearn path that does not scale.
     logcounts (n_cells, n_genes)
         → PCA → embedding (n_cells, n_pcs)
         → BatchCorrector.fit_transform → corrected embedding (n_cells, n_pcs)
