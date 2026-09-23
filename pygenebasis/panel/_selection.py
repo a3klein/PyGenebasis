@@ -72,7 +72,7 @@ def gene_search(
     genes_base : list[str], optional
         Genes to force-include as seeds.  They occupy the first len(genes_base)
         ranks.  Providing at least ~5 genes is recommended for large datasets
-        to avoid PCA failures in early iterations (see DEVELOPMENT.md §4).
+        to avoid PCA failures in early iterations.
     genes_discard : list[str], optional
         Genes to exclude from selection.
     genes_discard_prefix : list[str], optional

@@ -18,7 +18,8 @@ tests/reference_data/
 
 Tolerance constants
 -------------------
-Defined here and imported by test modules.  Matches the values in DEVELOPMENT.md.
+Defined here and imported by test modules.  Why each threshold is what it is:
+engineering_history.md, entries for 2026-04-07/08.
 """
 
 from __future__ import annotations
@@ -48,6 +49,14 @@ from helpers import (  # noqa: F401 — re-exported for convenience
 REF_DIR   = Path(__file__).parent / "reference_data"
 MOUSE_DIR = REF_DIR / "mouse_embryo"
 BG_SN_DIR = REF_DIR / "bg_sn"
+
+
+@pytest.fixture(autouse=True)
+def _close_figures():
+    """Close any figures a test opened — plotting functions never call plt.close()."""
+    yield
+    import matplotlib.pyplot as plt
+    plt.close("all")
 
 
 # ---------------------------------------------------------------------------

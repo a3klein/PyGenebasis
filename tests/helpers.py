@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Tolerance constants (from DEVELOPMENT.md)
+# Tolerance constants — rationale in engineering_history.md (2026-04-07/08)
 # ---------------------------------------------------------------------------
 
 SPEARMAN_TOL        = 0.95   # min Spearman ρ between Python and R score vectors
