@@ -13,6 +13,8 @@ I/O
 
 Preprocessing
     retain_informative_genes    Filter genes to HVGs before selection.
+    highly_variable_methylation_features
+                                mCH/mCG HVF, binned by mean x coverage.
 
 Graph construction
     build_knn_graph             Build a kNN graph from a gene subset.
@@ -67,6 +69,7 @@ from .io import read_adata, read_table, write_csv, write_tsv, write_json, prepar
 from .knn import build_knn_graph
 from .panel import (
     retain_informative_genes,
+    highly_variable_methylation_features,
     calc_minkowski_distances,
     gene_search,
     trim_panel,
@@ -107,6 +110,7 @@ __all__ = [
     "write_json",
     "prepare_batch_key",
     "retain_informative_genes",
+    "highly_variable_methylation_features",
     "build_knn_graph",
     "calc_minkowski_distances",
     "gene_search",
