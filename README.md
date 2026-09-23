@@ -73,8 +73,10 @@ count. Start small to gauge runtime before committing to a full run.
 | **Selection** | `gene_search`, `trim_panel`, `calc_minkowski_distances` |
 | **Evaluation** | `get_neighborhood_preservation_scores`, `get_gene_prediction_scores`, `get_neighs_all_stat`, `evaluate_library`, `get_panel_celltype_accuracy` |
 | **Mapping** | `get_celltype_mapping`, `get_redundancy_stat` |
+| **Panel evaluation** | `cluster_on_panel`, `cluster_agreement`, `agreement_crosstab`, `classifier_gap`, `marker_detection`, `coverage_by_label` |
 | **Reliability** | `compute_corr_matrices`, `score_gene_reliability`, `compute_gene_reliability`, `subsample_adata`, `perturb_expression`, `run_perturbation_analysis` |
-| **Plotting** | `plot_mapping_heatmap`, `plot_expression_heatmap`, `plot_coexpression`, `plot_redundancy_stat`, `plot_umaps_w_counts`, and the reliability plots |
+| **Plotting** | `plot_mapping_heatmap`, `plot_expression_heatmap`, `plot_coexpression`, `plot_redundancy_stat`, `plot_umaps_w_counts` |
+| **Evaluation figures** | `plot_preservation_violin`, `plot_weakness_map`, `plot_agreement_crosstab`, `plot_classifier_diagonal`, `plot_classifier_confusion`, `plot_marker_count` |
 
 Every public function is importable from the top level: `from pygenebasis import gene_search`.
 
@@ -143,6 +145,7 @@ Run `pygenebasis --help` or see [docs/cli.md](docs/cli.md) for all options.
 ## Documentation
 
 - [docs/methods.md](docs/methods.md) — what the algorithm does and what each metric means
+- [docs/panel_evaluation.md](docs/panel_evaluation.md) — evaluating a finished panel against a reference
 - [docs/01_panel_design.ipynb](docs/01_panel_design.ipynb) — panel design, evaluation and trimming, worked through
 - [docs/02_reliability.ipynb](docs/02_reliability.ipynb) — scoring a measured panel against its reference
 - [docs/cli.md](docs/cli.md) — command line reference

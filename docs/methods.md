@@ -67,6 +67,10 @@ against it. Two upstream bugs are fixed: it crashes under pandas >= 2, and its
 
 ## Evaluation metrics
 
+The summary below covers the core metrics. For evaluating a finished panel end to end —
+clustering agreement, the classifier gap, marker coverage and the per-label report — see
+[panel_evaluation.md](panel_evaluation.md).
+
 ### Cell score — `get_neighborhood_preservation_scores`
 
 Per cell, how well its neighbourhood survived the reduction to the panel. For cell `i`:
@@ -91,6 +95,14 @@ numerical differences (see the divergence note in the README).
 The same question asked per gene rather than per cell: how well can a gene's expression be
 predicted from neighbourhoods in the selection graph, relative to how well the true graph
 predicts it. Low-scoring genes are ones the panel fails to represent.
+
+It is a ratio of two correlations, `corr_sel / corr_all`, so it is **unbounded in both
+directions** — scores above 1 are common and scores can go negative. Two things drive a
+score above 1, and they mean different things. A gene on the panel helps define the graph it
+is then predicted from, so on-panel genes score high structurally (on one BG run, 63% of
+on-panel genes exceeded 1 against 12% off-panel). And a gene the true graph barely predicts
+has a near-zero denominator, so its ratio is noise. Read the median over **off-panel** genes,
+and discount scores whose `corr_all` is small.
 
 ### Cell type mapping — `get_celltype_mapping`
 
