@@ -21,6 +21,8 @@ dependencies = [
 [project.optional-dependencies]
 # Optional CLI polish — all import-guarded, the CLI works without them.
 cli = ["rich-click", "rich", "psutil"]
+# Only for the cluster_on_panel convenience; the agreement metrics work without it.
+clustering = ["igraph", "leidenalg"]
 
 [project.scripts]
 pygenebasis = "pygenebasis.cli._main:main"
