@@ -15,6 +15,9 @@ tests/notebooks/
 tests/images/
 tests/diagnose_*
 
+# Executed notebooks + their inputs — unpublished BG data, un-ignore once public
+docs/executed/
+
 # Local working notes — public repo
 CLAUDE.md
 engineering_history.md
