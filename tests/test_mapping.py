@@ -91,6 +91,20 @@ class TestGetCelltypeMappingContract:
         for ct in result["mapping"]["mapped_celltype"]:
             assert ct in valid_types
 
+    def test_batched_default_is_harmony(self, small_adata):
+        """Batched runs use the harmony default; mnn stays available."""
+        genes = small_adata.var_names[:10].tolist()
+        kwargs = dict(
+            genes_selection=genes, celltype_key="celltype", batch_key="batch",
+            n_neighbors=N_NEIGHBORS, knn_method="exact", random_state=RANDOM_STATE,
+        )
+        default = get_celltype_mapping(small_adata, **kwargs)
+        harmony = get_celltype_mapping(small_adata, batch_method="harmony", **kwargs)
+        mnn = get_celltype_mapping(small_adata, batch_method="mnn", **kwargs)
+
+        assert default["mapping"].equals(harmony["mapping"])
+        assert len(mnn["mapping"]) == small_adata.n_obs
+
 
 @pytest.mark.mouse
 class TestGetCelltypeMappingMouseReference:
@@ -155,7 +169,7 @@ class TestGetRedundancyStatContract:
         result = get_redundancy_stat(
             small_adata, genes=genes,
             celltype_key="celltype",
-            n_neighbors=N_NEIGHBORS, knn_method="exact",
+            n_neighbors=N_NEIGHBORS, knn_method="exact", n_jobs=1,
             random_state=RANDOM_STATE,
         )
         n_types = small_adata.obs["celltype"].nunique()
@@ -166,7 +180,7 @@ class TestGetRedundancyStatContract:
         result = get_redundancy_stat(
             small_adata, genes=genes,
             celltype_key="celltype",
-            n_neighbors=N_NEIGHBORS, knn_method="exact",
+            n_neighbors=N_NEIGHBORS, knn_method="exact", n_jobs=1,
             random_state=RANDOM_STATE,
         )
         expected = {
@@ -184,10 +198,23 @@ class TestGetRedundancyStatContract:
             small_adata, genes=genes,
             genes_to_assess=assess,
             celltype_key="celltype",
-            n_neighbors=N_NEIGHBORS, knn_method="exact",
+            n_neighbors=N_NEIGHBORS, knn_method="exact", n_jobs=1,
             random_state=RANDOM_STATE,
         )
         assert set(result["gene"].unique()) == set(assess)
+
+    def test_batched_default_is_harmony(self, small_adata):
+        """Batched runs use the harmony default."""
+        genes = small_adata.var_names[:3].tolist()
+        kwargs = dict(
+            genes=genes, celltype_key="celltype", batch_key="batch",
+            n_neighbors=N_NEIGHBORS, knn_method="exact", n_jobs=1,
+            random_state=RANDOM_STATE,
+        )
+        default = get_redundancy_stat(small_adata, **kwargs)
+        harmony = get_redundancy_stat(small_adata, batch_method="harmony", **kwargs)
+
+        assert default.equals(harmony)
 
 
 @pytest.mark.bg_sn

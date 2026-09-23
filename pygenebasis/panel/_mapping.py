@@ -11,6 +11,11 @@ get_redundancy_stat
     in cell type mapping accuracy per cell type.  Genes that cause a large
     drop when removed are non-redundant; genes that cause no drop are redundant.
     This function is embarrassingly parallel over genes and uses joblib.Parallel.
+
+Both default to ``batch_method="harmony"``, deliberately diverging from
+geneBasisR's MNN: our MNN is a from-scratch sklearn implementation that does not
+scale (OOM-killed a 39k-cell Cla run at 133 GB, 2026-09-08).  Pass
+``batch_method="mnn"`` for R parity.
 """
 
 from __future__ import annotations
@@ -29,7 +34,7 @@ def get_celltype_mapping(
     n_neighbors: int = 5,
     n_pcs_selection: int | None = None,
     knn_method: str = "approx",
-    batch_method: str = "mnn",
+    batch_method: str = "harmony",
     return_stat: bool = True,
     layer: str | None = None,
     random_state: int = 32,
@@ -51,7 +56,8 @@ def get_celltype_mapping(
     n_pcs_selection : int or None
         PCs for the selection graph. None skips PCA.
     knn_method : {"approx", "exact"}
-    batch_method : {"mnn", "harmony"}
+    batch_method : {"harmony", "mnn"}
+        Defaults to "harmony"; "mnn" matches geneBasisR but does not scale.
     return_stat : bool
         If True, also return per-cell-type accuracy (fraction correctly mapped).
     layer : str, optional
@@ -110,7 +116,7 @@ def get_redundancy_stat(
     batch_key: str | None = None,
     n_neighbors: int = 5,
     knn_method: str = "approx",
-    batch_method: str = "mnn",
+    batch_method: str = "harmony",
     n_jobs: int = -1,
     layer: str | None = None,
     random_state: int = 32,
