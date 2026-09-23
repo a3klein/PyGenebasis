@@ -55,10 +55,8 @@ def panel_search(
     from ._utils import configure_logging
     configure_logging(log_dir=log_dir)
 
-    from ..io import read_adata
+    from ..io import read_adata, write_csv
     from ..panel import retain_informative_genes, gene_search
-    from ..io import write_csv
-    import pandas as pd
 
     log.info("Loading %s", adata_path)
     adata = read_adata(adata_path)
@@ -82,8 +80,8 @@ def panel_search(
         layer=layer,
     )
 
-    df = pd.DataFrame({"gene": panel, "iteration": range(1, len(panel) + 1)})
-    write_csv(df, output)
+    # gene_search returns a DataFrame with columns rank, gene
+    write_csv(panel, output)
     log.info("Panel written to %s (%d genes)", output, len(panel))
 
 
@@ -108,12 +106,14 @@ def panel_search(
 @click.option("--batch-method", default="per_batch", show_default=True,
               type=click.Choice(["per_batch", "mnn", "harmony"]))
 @click.option("--n-neighbors", default=5, show_default=True, type=int)
+@click.option("--n-jobs", default=-1, show_default=True, type=int,
+              help="Parallel workers over leave-one-out candidates (-1 = all cores).")
 @click.option("--layer", default=None, type=str)
 @click.option("--log-dir", default=None, type=click.Path())
 def panel_trim(
     adata_path, panel_path, n_remove, output,
     genes_protect, batch_key, knn_method, batch_method,
-    n_neighbors, layer, log_dir,
+    n_neighbors, n_jobs, layer, log_dir,
 ):
     """Remove N_REMOVE genes from a panel, keeping the most informative ones.
 
@@ -143,12 +143,13 @@ def panel_trim(
         knn_method=knn_method,
         batch_method=batch_method,
         n_neighbors=n_neighbors,
+        n_jobs=n_jobs,
         layer=layer,
     )
 
-    df = pd.DataFrame({"gene": result["genes_panel"]})
+    df = pd.DataFrame({"gene": result["reduced_panel"]})
     write_csv(df, output)
-    log.info("Trimmed panel written to %s (%d genes)", output, len(result["genes_panel"]))
+    log.info("Trimmed panel written to %s (%d genes)", output, len(df))
 
 
 # ---------------------------------------------------------------------------
@@ -203,8 +204,17 @@ def panel_evaluate(
         layer=layer,
     )
 
-    write_csv(results["scores"], output)
-    log.info("Evaluation written to %s", output)
+    # evaluate_library returns one frame per metric; --output names the cell
+    # scores, the others are written beside it.
+    from pathlib import Path
+    out = Path(output)
+    write_csv(results["cell_score_stat"], out)
+    log.info("Cell scores written to %s", out)
+    for key, suffix in (("gene_score_stat", "_gene"), ("celltype_stat", "_celltype")):
+        if key in results:
+            sibling = out.with_name(f"{out.stem}{suffix}{out.suffix}")
+            write_csv(results[key], sibling)
+            log.info("%s written to %s", key, sibling)
 
 
 # ---------------------------------------------------------------------------
