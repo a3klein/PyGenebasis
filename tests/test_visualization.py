@@ -200,3 +200,106 @@ class TestPlotUmapsWCounts:
         adata = self._add_umap(small_adata)
         with pytest.raises(ValueError, match="No requested genes"):
             plot_umaps_w_counts(adata, ["FAKE_GENE_1", "FAKE_GENE_2"])
+
+
+# ---------------------------------------------------------------------------
+# Evaluation figures
+# ---------------------------------------------------------------------------
+
+class TestEvalFigures:
+
+    @staticmethod
+    def _labels_scores(n=600, seed=0):
+        rng = np.random.default_rng(seed)
+        labels = np.array(["A"] * 400 + ["B"] * 150 + ["TINY"] * 50)
+        scores = np.concatenate([rng.normal(0.95, 0.02, 400),
+                                 rng.normal(0.90, 0.03, 150),
+                                 rng.normal(0.55, 0.05, 50)])
+        return labels, scores
+
+    def test_preservation_violin_returns_fig_ax(self):
+        from pygenebasis import plot_preservation_violin
+        labels, scores = self._labels_scores()
+        fig, ax = plot_preservation_violin(scores, labels)
+        assert _is_fig(fig)
+        assert len(ax.get_yticklabels()) == 3
+
+    def test_violin_clip_keeps_every_group_median_visible(self):
+        """A small badly-preserved group sits outside the pooled quantiles."""
+        from pygenebasis import plot_preservation_violin
+        labels, scores = self._labels_scores()
+        fig, ax = plot_preservation_violin(scores, labels)
+        lo, hi = ax.get_xlim()
+        for lab in set(labels):
+            med = np.median(scores[labels == lab])
+            assert lo < med < hi, f"{lab} median {med} outside view"
+
+    def test_violin_sorted_by_median(self):
+        from pygenebasis import plot_preservation_violin
+        labels, scores = self._labels_scores()
+        fig, ax = plot_preservation_violin(scores, labels)
+        shown = [t.get_text() for t in ax.get_yticklabels()]
+        assert shown[0] == "TINY"        # lowest median drawn first
+
+    def test_weakness_map_labels_only_the_flagged(self):
+        from pygenebasis import plot_weakness_map
+        tab = pd.DataFrame({
+            "n_cells": [100, 100, 100],
+            "preservation_mean": [0.95, 0.94, 0.60],
+            "mapping_accuracy": [0.99, 0.98, 0.50],
+            "n_usable_markers": [50, 50, 1],
+            "diagnosis": ["ok", "ok", "marker shortfall — add markers"],
+        }, index=pd.Index(["A", "B", "BAD"], name="label"))
+        fig, ax = plot_weakness_map(tab)
+        assert _is_fig(fig)
+        assert [t.get_text() for t in ax.texts] == ["BAD"]
+
+    def test_weakness_map_needs_both_axes(self):
+        from pygenebasis import plot_weakness_map
+        with pytest.raises(KeyError):
+            plot_weakness_map(pd.DataFrame({"n_cells": [1]}, index=["A"]))
+
+    def test_agreement_crosstab_title_carries_scores(self):
+        from pygenebasis import agreement_crosstab, cluster_agreement
+        from pygenebasis import plot_agreement_crosstab
+        truth = np.repeat(list("ABC"), 30)
+        pred = np.repeat(list("xyz"), 30)
+        ct = agreement_crosstab(truth, pred)
+        fig, ax = plot_agreement_crosstab(ct, cluster_agreement(truth, pred))
+        assert "ARI" in ax.get_title() and "AMI" in ax.get_title()
+
+    def test_classifier_diagonal_and_confusion(self):
+        from pygenebasis import plot_classifier_diagonal, plot_classifier_confusion
+        per = pd.DataFrame({
+            "celltype": ["A", "B", "C"] * 2,
+            "F1": [0.99, 0.98, 0.40, 0.99, 0.97, 0.90],
+            "n_test": [30, 30, 30] * 2,
+            "feature_set": ["panel"] * 3 + ["full"] * 3,
+        })
+        fig, ax = plot_classifier_diagonal(per)
+        assert _is_fig(fig)
+        # only C differs by more than the default 0.05
+        assert [t.get_text() for t in ax.texts] == ["C"]
+
+        conf = pd.DataFrame(np.eye(3), index=list("ABC"), columns=list("ABC"))
+        fig, ax = plot_classifier_confusion(conf)
+        assert _is_fig(fig)
+
+    def test_marker_count_stacks_by_source(self):
+        from pygenebasis import plot_marker_count
+        cov = pd.DataFrame({
+            "n_usable_markers": [10, 4],
+            "n_from_lit": [6, 1],
+            "n_from_geneBasis": [4, 3],
+        }, index=pd.Index(["A", "B"], name="label"))
+        fig, ax = plot_marker_count(cov, marker_floor=5)
+        assert _is_fig(fig)
+        assert ax.get_legend() is not None
+
+    def test_marker_count_without_sources(self):
+        from pygenebasis import plot_marker_count
+        cov = pd.DataFrame({"n_usable_markers": [10, 4]},
+                           index=pd.Index(["A", "B"], name="label"))
+        fig, ax = plot_marker_count(cov)
+        assert _is_fig(fig)
+        assert ax.get_legend() is None
