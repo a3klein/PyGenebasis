@@ -27,6 +27,8 @@ Selection
     trim_panel                  Greedy iterative panel trimming (inverse of gene_search).
 
 Evaluation
+    knn_overlap                 Fraction of neighbours two kNN graphs share.
+    preservation_from_embedding Preservation from precomputed embeddings/graphs.
     get_neighborhood_preservation_scores
     get_gene_prediction_scores
     get_neighs_all_stat
@@ -87,6 +89,8 @@ from .panel import (
     trim_panel,
 )
 from .evaluation import (
+    knn_overlap,
+    preservation_from_embedding,
     get_neighborhood_preservation_scores,
     get_gene_prediction_scores,
     get_neighs_all_stat,
@@ -143,6 +147,8 @@ __all__ = [
     "calc_minkowski_distances",
     "gene_search",
     "trim_panel",
+    "knn_overlap",
+    "preservation_from_embedding",
     "get_neighborhood_preservation_scores",
     "get_gene_prediction_scores",
     "get_neighs_all_stat",

@@ -71,7 +71,7 @@ count. Start small to gauge runtime before committing to a full run.
 | **Preprocessing** | `retain_informative_genes`, `highly_variable_methylation_features` |
 | **Graph** | `build_knn_graph` |
 | **Selection** | `gene_search`, `trim_panel`, `calc_minkowski_distances` |
-| **Evaluation** | `get_neighborhood_preservation_scores`, `get_gene_prediction_scores`, `get_neighs_all_stat`, `evaluate_library`, `get_panel_celltype_accuracy` |
+| **Evaluation** | `preservation_from_embedding`, `knn_overlap`, `get_neighborhood_preservation_scores`, `get_gene_prediction_scores`, `get_neighs_all_stat`, `evaluate_library`, `get_panel_celltype_accuracy` |
 | **Mapping** | `get_celltype_mapping`, `get_redundancy_stat` |
 | **Panel evaluation** | `cluster_on_panel`, `cluster_agreement`, `agreement_crosstab`, `classifier_gap`, `marker_detection`, `coverage_by_label` |
 | **Reliability** | `compute_corr_matrices`, `score_gene_reliability`, `compute_gene_reliability`, `subsample_adata`, `perturb_expression`, `run_perturbation_analysis` |

@@ -1,4 +1,6 @@
 from ._neighborhood import (
+    knn_overlap,
+    preservation_from_embedding,
     get_neighs_all_stat,
     get_neighborhood_preservation_scores,
     get_gene_prediction_scores,
@@ -15,6 +17,8 @@ from ._library import evaluate_library
 from ._report import per_label_summary, panel_report
 
 __all__ = [
+    "knn_overlap",
+    "preservation_from_embedding",
     "get_neighs_all_stat",
     "get_neighborhood_preservation_scores",
     "get_gene_prediction_scores",

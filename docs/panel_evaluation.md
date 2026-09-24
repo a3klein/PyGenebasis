@@ -64,6 +64,35 @@ bar) marked and `n` on the right. The x-range is clipped to pooled quantiles bec
 handful of extreme cells otherwise squeeze every violin flat — no cells are dropped, and
 a group's own median is never clipped out of view.
 
+### kNN overlap — the bounded alternative
+
+The returned frame also carries `knn_overlap`: the fraction of its reference neighbours
+the panel actually recovered, per cell. It is bounded [0, 1], means something plain, and
+avoids the ill-conditioning above, so it is the better number to quote across runs. The
+ratio score is kept because it is what geneBasisR computes.
+
+### Scoring your own embeddings
+
+Both metrics have array-level entry points that skip the AnnData entirely:
+
+```python
+scores  = pgb.preservation_from_embedding(ref_embedding, ref_indices, panel_indices)
+overlap = pgb.knn_overlap(ref_indices, panel_indices)
+```
+
+This matters for methylation. An mC embedding is not a PCA over a gene list — it is
+`balanced_pca` → `significant_pc_test` → scaled CH and CG components concatenated →
+harmonypy — so `get_neighborhood_preservation_scores`, which builds its own embedding
+from `(adata, genes)`, cannot produce it. Passing the finished arrays instead means the
+methylation and RNA sides compute the same quantity on the same scale, rather than mC
+falling back to raw overlap because the normalised score was unreachable.
+
+Note the asymmetry in what each side needs. The reference side needs **coordinates**,
+because the score measures distances to the panel's chosen neighbours and those pairs are
+generally not edges of the reference graph. The selection side needs only **indices** —
+the panel embedding's own geometry never enters. `knn_overlap` needs no coordinates at
+all.
+
 ## Gene prediction score
 
 Per gene, whether the panel's neighbourhoods can predict its expression:
@@ -204,6 +233,11 @@ Every input except the labels is optional; a partial report still works.
 | `confused with a neighbour` | mapping poor on a large population |
 | `diffuse neighbourhood, markers present` | preservation poor only |
 | `ok` | |
+
+**`marker_floor` scales with the panel.** The default of 20 suits a ~960-gene panel. An
+80-gene panel over 11 cell types has roughly seven genes per type to give, so leaving the
+default in place labels almost everything a shortfall. Set it to something the panel could
+plausibly reach.
 
 The distinction the diagnosis exists to make: **a type low on mapping but rich in markers
 is usually kNN failing on a small population, not a marker gap.** Ranking by accuracy

@@ -74,6 +74,111 @@ def get_neighs_all_stat(
     }
 
 
+def knn_overlap(indices_a, indices_b) -> np.ndarray:
+    """Per-cell fraction of neighbours two kNN graphs agree on.
+
+    Needs only the neighbour indices, so it works on any pair of graphs
+    regardless of how their embeddings were built — which makes it the one
+    preservation number comparable across modalities.  Bounded [0, 1], unlike
+    the ratio score.
+
+    Parameters
+    ----------
+    indices_a, indices_b : array-like, shape (n_cells, k)
+        Neighbour indices.  ``k`` may differ between them; the fraction is
+        taken over the smaller.
+
+    Returns
+    -------
+    np.ndarray, shape (n_cells,)
+    """
+    a = np.asarray(indices_a)
+    b = np.asarray(indices_b)
+    if a.ndim != 2 or b.ndim != 2:
+        raise ValueError(f"expected 2-D index arrays, got {a.ndim}-D and {b.ndim}-D")
+    if a.shape[0] != b.shape[0]:
+        raise ValueError(f"different cell counts: {a.shape[0]} vs {b.shape[0]}")
+    k = min(a.shape[1], b.shape[1])
+    return np.fromiter(
+        (len(set(ra[:k]).intersection(rb[:k])) / k for ra, rb in zip(a, b)),
+        dtype=np.float64, count=a.shape[0])
+
+
+def preservation_from_embedding(
+    reference_embedding,
+    reference_indices,
+    selection_indices,
+    *,
+    mean_dist_all=None,
+    batch_labels=None,
+    option: str = "exact",
+    random_state: int = 32,
+) -> np.ndarray:
+    """Neighbourhood preservation from precomputed embeddings and graphs.
+
+    The scoring maths, separated from how the inputs were built, so a pipeline
+    that makes its own embedding — methylation via ALLCools, say — can use the
+    same metric as the RNA path.  ``get_neighborhood_preservation_scores`` is
+    this function plus the AnnData plumbing.
+
+    Note the asymmetry: the reference side needs **coordinates**, because the
+    score measures distances from each cell to the panel's chosen neighbours
+    and those pairs are not edges of the reference graph.  The selection side
+    needs only **indices** — the panel embedding's own geometry never enters.
+
+    Parameters
+    ----------
+    reference_embedding : array-like, shape (n_cells, n_features)
+        Coordinates of the reference (all-feature) embedding.  Every distance
+        below is measured here.
+    reference_indices : array-like, shape (n_cells, k)
+        Neighbours from the reference graph.
+    selection_indices : array-like, shape (n_cells, k)
+        Neighbours from the panel graph.
+    mean_dist_all : array-like, optional
+        Per-cell mean distance to all other cells.  Derived from the embedding
+        when omitted.
+    batch_labels : array-like, optional
+        Restricts ``mean_dist_all`` to within-batch distances, matching what
+        ``batch_method="per_batch"`` does.  Ignored if ``mean_dist_all`` is
+        supplied.
+    option : {"exact", "approx"}
+        Whether ``mean_dist_all`` uses all cells or a 10% sample.
+    random_state : int
+        Seeds the sample when ``option="approx"``.
+
+    Returns
+    -------
+    np.ndarray, shape (n_cells,)
+        Per-cell score; 1.0 means the panel recovers the reference
+        neighbourhood exactly.  Unbounded in both directions — see
+        ``docs/panel_evaluation.md``.
+    """
+    emb = np.asarray(reference_embedding, dtype=np.float64)
+    ref_idx = np.asarray(reference_indices)
+    sel_idx = np.asarray(selection_indices)
+    if emb.ndim != 2:
+        raise ValueError(f"reference_embedding must be 2-D, got {emb.ndim}-D")
+    for name, idx in (("reference_indices", ref_idx), ("selection_indices", sel_idx)):
+        if idx.shape[0] != emb.shape[0]:
+            raise ValueError(
+                f"{name} has {idx.shape[0]} rows, embedding has {emb.shape[0]}")
+
+    if mean_dist_all is None:
+        mean_dist_all = _mean_dist_all(
+            emb, option=option, random_state=random_state,
+            batch_labels=None if batch_labels is None else np.asarray(batch_labels))
+    mean_dist_all = np.asarray(mean_dist_all, dtype=np.float64)
+
+    dist_true = _median_neighbour_dist(emb, ref_idx)
+    dist_selection = _median_neighbour_dist(emb, sel_idx)
+
+    denom = mean_dist_all - dist_true
+    # identical neighbourhoods make this zero; NaN is the honest answer
+    denom = np.where(np.abs(denom) < 1e-12, np.nan, denom)
+    return (mean_dist_all - dist_selection) / denom
+
+
 def get_neighborhood_preservation_scores(
     adata: AnnData,
     genes_selection: list[str],
@@ -121,7 +226,9 @@ def get_neighborhood_preservation_scores(
     Returns
     -------
     pd.DataFrame
-        Columns: ``cell`` (str), ``cell_score`` (float).
+        Columns: ``cell`` (str), ``cell_score`` (float), ``knn_overlap``
+        (float).  ``knn_overlap`` is the bounded [0, 1] alternative and is the
+        one comparable across modalities.
     """
     from ..knn._graph import build_knn_graph
 
@@ -157,23 +264,17 @@ def get_neighborhood_preservation_scores(
         random_state=random_state,
     )
 
-    # dist_true[i]:      median Euclidean distance (in all-genes embedding) to
-    #                    true-graph neighbours of cell i
-    # dist_selection[i]: median Euclidean distance (in all-genes embedding) to
-    #                    selection-graph neighbours of cell i
-    # All three quantities (dist_true, dist_selection, mean_dist_all) are in
-    # the same all-genes embedding, so the cell_score formula is well-scaled.
-    dist_true = _median_neighbour_dist(all_embedding, true_indices)
-    dist_selection = _median_neighbour_dist(all_embedding, sel_indices)
-
-    denom = mean_dist_all - dist_true
-    # Avoid division by zero (can happen when all cells in a neighbourhood are identical)
-    denom = np.where(np.abs(denom) < 1e-12, np.nan, denom)
-    cell_scores = (mean_dist_all - dist_selection) / denom
+    # mean_dist_all is already batch-restricted by get_neighs_all_stat when
+    # batch_method="per_batch", so it is passed through rather than recomputed.
+    cell_scores = preservation_from_embedding(
+        all_embedding, true_indices, sel_indices,
+        mean_dist_all=mean_dist_all,
+    )
 
     return pd.DataFrame({
         "cell": adata.obs_names.tolist(),
         "cell_score": cell_scores,
+        "knn_overlap": knn_overlap(true_indices, sel_indices),
     })
 
 

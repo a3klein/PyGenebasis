@@ -533,3 +533,126 @@ class TestGetPanelCelltypeAccuracy:
         )
         pd = pytest.importorskip("pandas")
         pd.testing.assert_frame_equal(r_default, r_none)
+
+
+class TestKnnOverlap:
+    """Bounded [0, 1] preservation, computable from indices alone."""
+
+    def test_identical_graphs_score_one(self):
+        from pygenebasis import knn_overlap
+        idx = np.array([[1, 2, 3], [0, 2, 3], [0, 1, 3]])
+        np.testing.assert_allclose(knn_overlap(idx, idx), 1.0)
+
+    def test_disjoint_graphs_score_zero(self):
+        from pygenebasis import knn_overlap
+        a = np.array([[1, 2], [0, 2]])
+        b = np.array([[3, 4], [3, 4]])
+        np.testing.assert_allclose(knn_overlap(a, b), 0.0)
+
+    def test_partial_overlap_is_exact(self):
+        from pygenebasis import knn_overlap
+        a = np.array([[1, 2, 3, 4, 5]])
+        b = np.array([[1, 2, 3, 8, 9]])       # 3 of 5 shared
+        np.testing.assert_allclose(knn_overlap(a, b), 0.6)
+
+    def test_uses_the_smaller_k(self):
+        from pygenebasis import knn_overlap
+        a = np.array([[1, 2, 3, 4]])
+        b = np.array([[1, 2]])                 # both of b's 2 are in a
+        np.testing.assert_allclose(knn_overlap(a, b), 1.0)
+
+    def test_shape_mismatch_raises(self):
+        from pygenebasis import knn_overlap
+        with pytest.raises(ValueError, match="different cell counts"):
+            knn_overlap(np.zeros((3, 2), int), np.zeros((4, 2), int))
+
+
+class TestPreservationFromEmbedding:
+    """The scoring maths, separated from how the inputs were built."""
+
+    @staticmethod
+    def _case(seed=0, n=120, d=8, k=5):
+        from pygenebasis import get_neighs_all_stat  # noqa: F401  (import check)
+        from sklearn.neighbors import NearestNeighbors
+        rng = np.random.default_rng(seed)
+        emb = rng.normal(size=(n, d))
+        nn = NearestNeighbors(n_neighbors=k + 1).fit(emb)
+        ref = nn.kneighbors(emb, return_distance=False)[:, 1:]
+        sel = np.array([rng.permutation(n)[:k] for _ in range(n)])
+        return emb, ref, sel
+
+    def test_perfect_selection_scores_one(self):
+        """If the panel picks the reference neighbours, the score is exactly 1."""
+        from pygenebasis import preservation_from_embedding
+        emb, ref, _ = self._case()
+        s = preservation_from_embedding(emb, ref, ref, option="exact")
+        np.testing.assert_allclose(s, 1.0, atol=1e-9)
+
+    def test_random_selection_scores_below_one(self):
+        from pygenebasis import preservation_from_embedding
+        emb, ref, sel = self._case()
+        s = preservation_from_embedding(emb, ref, sel, option="exact")
+        assert np.nanmedian(s) < 1.0
+
+    def test_precomputed_mean_dist_matches_derived(self):
+        from pygenebasis import preservation_from_embedding
+        from pygenebasis.evaluation._neighborhood import _mean_dist_all
+        emb, ref, sel = self._case()
+        derived = preservation_from_embedding(emb, ref, sel, option="exact")
+        supplied = preservation_from_embedding(
+            emb, ref, sel, mean_dist_all=_mean_dist_all(emb, option="exact"))
+        np.testing.assert_allclose(derived, supplied, rtol=0, atol=1e-12)
+
+    def test_batch_labels_change_the_result(self):
+        """Otherwise the batch-restricted path is silently dead."""
+        from pygenebasis import preservation_from_embedding
+        emb, ref, sel = self._case()
+        labels = np.array(["a"] * 60 + ["b"] * 60)
+        plain = preservation_from_embedding(emb, ref, sel, option="exact")
+        batched = preservation_from_embedding(emb, ref, sel, option="exact",
+                                              batch_labels=labels)
+        assert not np.allclose(plain, batched)
+
+    def test_wrapper_agrees_with_the_array_function(self, small_adata):
+        """The AnnData path must be this function plus plumbing, nothing more."""
+        from pygenebasis import (get_neighborhood_preservation_scores,
+                                 get_neighs_all_stat, preservation_from_embedding)
+        from pygenebasis.knn._graph import build_knn_graph
+        panel = small_adata.var_names[:12].tolist()
+        allg = small_adata.var_names.tolist()
+        stat = get_neighs_all_stat(small_adata, genes_all=allg, n_neighbors=5,
+                                   knn_method="exact", option="exact",
+                                   random_state=32)
+        sel, _ = build_knn_graph(small_adata, panel, knn_method="exact",
+                                 n_neighbors=5, n_pcs=None, random_state=32)
+        direct = preservation_from_embedding(
+            stat["embedding"], stat["indices"], sel,
+            mean_dist_all=stat["mean_dist_all"])
+        viaanndata = get_neighborhood_preservation_scores(
+            small_adata, panel, genes_all=allg, n_neighbors=5,
+            knn_method="exact", n_pcs_selection=None, option="exact",
+            neighs_all_stat=stat, random_state=32)["cell_score"].to_numpy()
+        np.testing.assert_allclose(direct, viaanndata, rtol=0, atol=1e-12,
+                                   equal_nan=True)
+
+    def test_no_anndata_needed(self):
+        """A methylation-style path: two embeddings, no AnnData anywhere."""
+        from pygenebasis import knn_overlap, preservation_from_embedding
+        from sklearn.neighbors import NearestNeighbors
+        rng = np.random.default_rng(1)
+        n, k = 200, 5
+        ref_emb = rng.normal(size=(n, 30))          # e.g. full-methylome HVF
+        panel_emb = ref_emb[:, :6] + rng.normal(scale=0.1, size=(n, 6))
+        idx = lambda e: NearestNeighbors(n_neighbors=k + 1).fit(e).kneighbors(
+            e, return_distance=False)[:, 1:]
+        s = preservation_from_embedding(ref_emb, idx(ref_emb), idx(panel_emb))
+        o = knn_overlap(idx(ref_emb), idx(panel_emb))
+        assert np.isfinite(s).all() and ((0 <= o) & (o <= 1)).all()
+
+    def test_bad_shapes_raise(self):
+        from pygenebasis import preservation_from_embedding
+        emb, ref, sel = self._case()
+        with pytest.raises(ValueError, match="must be 2-D"):
+            preservation_from_embedding(emb[:, 0], ref, sel)
+        with pytest.raises(ValueError, match="rows, embedding has"):
+            preservation_from_embedding(emb, ref[:10], sel)
